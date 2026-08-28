@@ -18,17 +18,18 @@ import {
 } from '@dnd-kit/sortable';
 import { CSS } from '@dnd-kit/utilities';
 import { Photo, Video, MediaType, FavoriteItem } from '../types';
-import { PhotoCard } from './PhotoCard';
-import { VideoCard } from './VideoCard';
 
-// Sortable Wrapper Component
+// Sortable Wrapper Component (Tablet Style)
 interface SortableItemProps {
   id: string | number;
-  children: React.ReactNode;
   index: number;
+  imageUrl: string;
+  title: string;
+  author: string;
+  onSelect: () => void;
 }
 
-function SortableItem({ id, children, index }: SortableItemProps) {
+function SortableItem({ id, index, imageUrl, title, author, onSelect }: SortableItemProps) {
   const {
     attributes,
     listeners,
@@ -46,19 +47,48 @@ function SortableItem({ id, children, index }: SortableItemProps) {
   };
 
   return (
-    <div ref={setNodeRef} style={style} className={`flex items-start gap-4 ${isDragging ? 'opacity-70' : ''}`}>
-      <div 
-        {...attributes} 
-        {...listeners}
-        className="mt-4 p-2 bg-white rounded-lg shadow-sm border border-zinc-200 cursor-grab active:cursor-grabbing hover:bg-zinc-50 shrink-0"
-      >
-        <div className="flex flex-col items-center gap-1">
-          <span className="text-xs font-bold text-zinc-400">#{index + 1}</span>
-          <GripVertical className="w-5 h-5 text-zinc-400" />
-        </div>
+    <div 
+      ref={setNodeRef} 
+      style={style} 
+      className={`flex flex-row items-center gap-4 sm:gap-6 bg-white p-4 rounded-xl border border-zinc-200 shadow-sm ${isDragging ? 'opacity-90 ring-2 ring-black/5 shadow-lg scale-[1.01]' : 'hover:border-zinc-300 transition-all duration-200'}`}
+    >
+      {/* Rank Number */}
+      <div className="w-12 sm:w-16 shrink-0 flex justify-center">
+        <span className="font-serif italic text-3xl sm:text-4xl text-zinc-300 font-light tracking-tighter">
+          {(index + 1).toString().padStart(2, '0')}
+        </span>
       </div>
-      <div className="flex-1 min-w-0">
-        {children}
+
+      {/* Thumbnail */}
+      <div 
+        className="w-16 h-16 sm:w-24 sm:h-24 shrink-0 rounded-lg overflow-hidden bg-zinc-100 cursor-pointer shadow-sm" 
+        onClick={onSelect}
+      >
+        <img src={imageUrl} alt={title} className="w-full h-full object-cover hover:scale-105 transition-transform duration-500" />
+      </div>
+
+      {/* Text Details */}
+      <div className="flex-1 min-w-0 py-2">
+        <h3 
+          className="text-[11px] sm:text-sm font-bold text-gray-900 uppercase tracking-wider truncate mb-1 cursor-pointer hover:text-black" 
+          onClick={onSelect}
+        >
+          {title || 'UNTITLED MEDIA CAPTURE'}
+        </h3>
+        <p className="text-[9px] sm:text-[10px] text-zinc-400 uppercase tracking-[0.2em] font-bold">
+          SRC // {author}
+        </p>
+      </div>
+
+      {/* Drag Handle */}
+      <div className="w-12 shrink-0 flex justify-center">
+        <div 
+          {...attributes} 
+          {...listeners}
+          className="p-2 sm:p-3 cursor-grab active:cursor-grabbing hover:bg-zinc-50 rounded-lg transition-colors text-zinc-300 hover:text-zinc-500"
+        >
+          <GripVertical className="w-5 h-5" />
+        </div>
       </div>
     </div>
   );
@@ -219,19 +249,14 @@ export const MediaGrid: React.FC<MediaGridProps> = ({
     : videos.map(v => v.id);
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-8">
       {/* Results Header / Counter */}
-      <div className="flex items-center justify-between border-b border-zinc-200/80 pb-3">
-        <div className="flex items-center gap-2">
-          <span className="text-xs font-bold uppercase tracking-wider text-zinc-700">
-            {mediaType === 'photos' ? 'Ranked Photos' : 'Ranked Videos'}
-          </span>
-          <span className="text-xs text-zinc-400 font-mono">
-            ({itemsCount} loaded {totalResults ? `of ${totalResults.toLocaleString()}` : ''})
-          </span>
-        </div>
-        <span className="text-[11px] text-zinc-400 hidden sm:block">
-          Drag to rank • Click for full preview
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between pb-4 gap-2 border-b border-zinc-200/80 mb-6">
+        <h2 className="text-xs font-bold uppercase tracking-[0.15em] text-zinc-500">
+          ANALYSIS POOL ({itemsCount} SUBJECTS)
+        </h2>
+        <span className="text-[11px] font-medium italic text-zinc-400">
+          Drag items to rank by transaction likelihood
         </span>
       </div>
 
@@ -245,28 +270,30 @@ export const MediaGrid: React.FC<MediaGridProps> = ({
           items={itemIds}
           strategy={verticalListSortingStrategy}
         >
-          <div className="flex flex-col gap-6 max-w-3xl mx-auto">
+          <div className="flex flex-col gap-4 max-w-4xl mx-auto w-full">
             {mediaType === 'photos' ? (
               photos.map((photo, index) => (
-                <SortableItem key={photo.id} id={photo.id} index={index}>
-                  <PhotoCard
-                    photo={photo}
-                    isFavorite={isFav(photo.id, 'photos')}
-                    onToggleFavorite={onToggleFavorite}
-                    onSelect={onSelectPhoto}
-                  />
-                </SortableItem>
+                <SortableItem 
+                  key={photo.id} 
+                  id={photo.id} 
+                  index={index}
+                  imageUrl={photo.src.medium || photo.src.original}
+                  title={photo.alt || `Visual Subject ${photo.id}`}
+                  author={photo.photographer}
+                  onSelect={() => onSelectPhoto(photo)}
+                />
               ))
             ) : (
               videos.map((video, index) => (
-                <SortableItem key={video.id} id={video.id} index={index}>
-                  <VideoCard
-                    video={video}
-                    isFavorite={isFav(video.id, 'videos')}
-                    onToggleFavorite={onToggleFavorite}
-                    onSelect={onSelectVideo}
-                  />
-                </SortableItem>
+                <SortableItem 
+                  key={video.id} 
+                  id={video.id} 
+                  index={index}
+                  imageUrl={video.image}
+                  title={`Motion Subject ${video.id}`}
+                  author={video.user.name}
+                  onSelect={() => onSelectVideo(video)}
+                />
               ))
             )}
           </div>
@@ -276,21 +303,18 @@ export const MediaGrid: React.FC<MediaGridProps> = ({
       {/* Infinite Scroll Sentinel / Load More Container */}
       <div ref={sentinelRef} className="py-8 flex flex-col items-center justify-center">
         {isLoadingMore ? (
-          <div className="flex items-center gap-2 text-xs font-medium text-zinc-500">
-            <Loader2 className="w-4 h-4 animate-spin text-zinc-600" />
-            <span>Loading more live results from Pexels...</span>
-          </div>
+          <Loader2 className="w-5 h-5 animate-spin text-zinc-300" />
         ) : hasMore ? (
           <button
             id="load-more-btn"
             onClick={onLoadMore}
-            className="px-6 py-2.5 bg-white border border-zinc-300 hover:border-zinc-900 text-zinc-900 text-xs font-bold uppercase tracking-wider rounded-xl shadow-xs transition-all cursor-pointer hover:bg-zinc-50"
+            className="px-6 py-2.5 bg-transparent border border-zinc-200 hover:border-zinc-400 text-zinc-500 text-[10px] font-bold uppercase tracking-widest rounded-full transition-all cursor-pointer hover:text-zinc-800"
           >
             Load More Results
           </button>
         ) : (
-          <p className="text-xs text-zinc-400 italic">
-            You've reached the end of this collection
+          <p className="text-[10px] uppercase tracking-widest text-zinc-400 font-bold">
+            End of Collection
           </p>
         )}
       </div>
