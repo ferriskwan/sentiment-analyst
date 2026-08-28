@@ -125,6 +125,20 @@ export default function App() {
             });
           }
 
+          const rankKey = `rank-photos-${query || 'home'}`;
+          const savedRank = sessionStorage.getItem(rankKey);
+          if (savedRank) {
+            const rankArray = JSON.parse(savedRank);
+            fetchedPhotos.sort((a, b) => {
+              const indexA = rankArray.indexOf(a.id);
+              const indexB = rankArray.indexOf(b.id);
+              if (indexA === -1 && indexB === -1) return 0;
+              if (indexA === -1) return 1;
+              if (indexB === -1) return -1;
+              return indexA - indexB;
+            });
+          }
+
           if (isLoadMore) {
             setPhotos((prev) => [...prev, ...fetchedPhotos]);
           } else {
@@ -143,6 +157,20 @@ export default function App() {
                 return (v.user?.name || '').toLowerCase().includes(q);
               }
               return true;
+            });
+          }
+
+          const rankKey = `rank-videos-${query || 'home'}`;
+          const savedRank = sessionStorage.getItem(rankKey);
+          if (savedRank) {
+            const rankArray = JSON.parse(savedRank);
+            fetchedVideos.sort((a, b) => {
+              const indexA = rankArray.indexOf(a.id);
+              const indexB = rankArray.indexOf(b.id);
+              if (indexA === -1 && indexB === -1) return 0;
+              if (indexA === -1) return 1;
+              if (indexB === -1) return -1;
+              return indexA - indexB;
             });
           }
 
@@ -187,6 +215,28 @@ export default function App() {
     setPage(nextPage);
     fetchMedia(nextPage, true);
   };
+
+  const handleReorder = useCallback((oldIndex: number, newIndex: number) => {
+    if (mediaType === 'photos') {
+      setPhotos((prev) => {
+        const newArr = [...prev];
+        const [moved] = newArr.splice(oldIndex, 1);
+        newArr.splice(newIndex, 0, moved);
+        const rankKey = `rank-photos-${query || 'home'}`;
+        sessionStorage.setItem(rankKey, JSON.stringify(newArr.map(p => p.id)));
+        return newArr;
+      });
+    } else {
+      setVideos((prev) => {
+        const newArr = [...prev];
+        const [moved] = newArr.splice(oldIndex, 1);
+        newArr.splice(newIndex, 0, moved);
+        const rankKey = `rank-videos-${query || 'home'}`;
+        sessionStorage.setItem(rankKey, JSON.stringify(newArr.map(v => v.id)));
+        return newArr;
+      });
+    }
+  }, [mediaType, query]);
 
   // Search & Category handlers
   const handleSearch = (newQuery: string) => {
@@ -328,6 +378,7 @@ export default function App() {
           onToggleFavorite={handleToggleFavorite}
           onSelectPhoto={handleSelectPhoto}
           onSelectVideo={handleSelectVideo}
+          onReorder={handleReorder}
           onRetry={() => fetchMedia(1, false)}
           error={error}
           totalResults={totalResults}

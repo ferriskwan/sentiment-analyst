@@ -1,8 +1,68 @@
 import React, { useEffect, useRef } from 'react';
-import { Loader2, AlertCircle, RefreshCw, Sparkles, Image as ImageIcon } from 'lucide-react';
+import { Loader2, AlertCircle, RefreshCw, Sparkles, Image as ImageIcon, GripVertical } from 'lucide-react';
+import {
+  DndContext,
+  closestCenter,
+  KeyboardSensor,
+  PointerSensor,
+  useSensor,
+  useSensors,
+  DragEndEvent
+} from '@dnd-kit/core';
+import {
+  arrayMove,
+  SortableContext,
+  sortableKeyboardCoordinates,
+  verticalListSortingStrategy,
+  useSortable
+} from '@dnd-kit/sortable';
+import { CSS } from '@dnd-kit/utilities';
 import { Photo, Video, MediaType, FavoriteItem } from '../types';
 import { PhotoCard } from './PhotoCard';
 import { VideoCard } from './VideoCard';
+
+// Sortable Wrapper Component
+interface SortableItemProps {
+  id: string | number;
+  children: React.ReactNode;
+  index: number;
+}
+
+function SortableItem({ id, children, index }: SortableItemProps) {
+  const {
+    attributes,
+    listeners,
+    setNodeRef,
+    transform,
+    transition,
+    isDragging,
+  } = useSortable({ id });
+
+  const style = {
+    transform: CSS.Transform.toString(transform),
+    transition,
+    zIndex: isDragging ? 10 : 1,
+    position: 'relative' as const,
+  };
+
+  return (
+    <div ref={setNodeRef} style={style} className={`flex items-start gap-4 ${isDragging ? 'opacity-70' : ''}`}>
+      <div 
+        {...attributes} 
+        {...listeners}
+        className="mt-4 p-2 bg-white rounded-lg shadow-sm border border-zinc-200 cursor-grab active:cursor-grabbing hover:bg-zinc-50 shrink-0"
+      >
+        <div className="flex flex-col items-center gap-1">
+          <span className="text-xs font-bold text-zinc-400">#{index + 1}</span>
+          <GripVertical className="w-5 h-5 text-zinc-400" />
+        </div>
+      </div>
+      <div className="flex-1 min-w-0">
+        {children}
+      </div>
+    </div>
+  );
+}
 
 interface MediaGridProps {
   mediaType: MediaType;
@@ -16,6 +76,7 @@ interface MediaGridProps {
   onToggleFavorite: (item: Photo | Video) => void;
   onSelectPhoto: (photo: Photo) => void;
   onSelectVideo: (video: Video) => void;
+  onReorder?: (oldIndex: number, newIndex: number) => void;
   onRetry: () => void;
   error: string | null;
   totalResults?: number;
@@ -121,49 +182,95 @@ export const MediaGrid: React.FC<MediaGridProps> = ({
     );
   }
 
+  const sensors = useSensors(
+    useSensor(PointerSensor, {
+      activationConstraint: {
+        distance: 5,
+      },
+    }),
+    useSensor(KeyboardSensor, {
+      coordinateGetter: sortableKeyboardCoordinates,
+    })
+  );
+
+  const handleDragEnd = (event: DragEndEvent) => {
+    const { active, over } = event;
+
+    if (over && active.id !== over.id) {
+      if (mediaType === 'photos') {
+        const oldIndex = photos.findIndex((p) => p.id === active.id);
+        const newIndex = photos.findIndex((p) => p.id === over.id);
+        if (onReorder && oldIndex !== -1 && newIndex !== -1) {
+          onReorder(oldIndex, newIndex);
+        }
+      } else {
+        const oldIndex = videos.findIndex((v) => v.id === active.id);
+        const newIndex = videos.findIndex((v) => v.id === over.id);
+        if (onReorder && oldIndex !== -1 && newIndex !== -1) {
+          onReorder(oldIndex, newIndex);
+        }
+      }
+    }
+  };
+
+  const itemIds = mediaType === 'photos' 
+    ? photos.map(p => p.id) 
+    : videos.map(v => v.id);
+
   return (
     <div className="space-y-6">
       {/* Results Header / Counter */}
       <div className="flex items-center justify-between border-b border-zinc-200/80 pb-3">
         <div className="flex items-center gap-2">
           <span className="text-xs font-bold uppercase tracking-wider text-zinc-700">
-            {mediaType === 'photos' ? 'Stock Photos' : 'Stock Videos'}
+            {mediaType === 'photos' ? 'Ranked Photos' : 'Ranked Videos'}
           </span>
           <span className="text-xs text-zinc-400 font-mono">
             ({itemsCount} loaded {totalResults ? `of ${totalResults.toLocaleString()}` : ''})
           </span>
         </div>
         <span className="text-[11px] text-zinc-400 hidden sm:block">
-          Hover for creator & direct downloads • Click for full preview
+          Drag to rank • Click for full preview
         </span>
       </div>
 
-      {/* Media Grid: Columns masonry for photos, Responsive grid for videos */}
-      {mediaType === 'photos' ? (
-        <div className="columns-1 sm:columns-2 lg:columns-3 xl:columns-4 gap-4">
-          {photos.map((photo) => (
-            <PhotoCard
-              key={photo.id}
-              photo={photo}
-              isFavorite={isFav(photo.id, 'photos')}
-              onToggleFavorite={onToggleFavorite}
-              onSelect={onSelectPhoto}
-            />
-          ))}
-        </div>
-      ) : (
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
-          {videos.map((video) => (
-            <VideoCard
-              key={video.id}
-              video={video}
-              isFavorite={isFav(video.id, 'videos')}
-              onToggleFavorite={onToggleFavorite}
-              onSelect={onSelectVideo}
-            />
-          ))}
-        </div>
-      )}
+      {/* Media List: Sortable Vertical Rows */}
+      <DndContext 
+        sensors={sensors}
+        collisionDetection={closestCenter}
+        onDragEnd={handleDragEnd}
+      >
+        <SortableContext 
+          items={itemIds}
+          strategy={verticalListSortingStrategy}
+        >
+          <div className="flex flex-col gap-6 max-w-3xl mx-auto">
+            {mediaType === 'photos' ? (
+              photos.map((photo, index) => (
+                <SortableItem key={photo.id} id={photo.id} index={index}>
+                  <PhotoCard
+                    photo={photo}
+                    isFavorite={isFav(photo.id, 'photos')}
+                    onToggleFavorite={onToggleFavorite}
+                    onSelect={onSelectPhoto}
+                  />
+                </SortableItem>
+              ))
+            ) : (
+              videos.map((video, index) => (
+                <SortableItem key={video.id} id={video.id} index={index}>
+                  <VideoCard
+                    video={video}
+                    isFavorite={isFav(video.id, 'videos')}
+                    onToggleFavorite={onToggleFavorite}
+                    onSelect={onSelectVideo}
+                  />
+                </SortableItem>
+              ))
+            )}
+          </div>
+        </SortableContext>
+      </DndContext>
 
       {/* Infinite Scroll Sentinel / Load More Container */}
       <div ref={sentinelRef} className="py-8 flex flex-col items-center justify-center">
