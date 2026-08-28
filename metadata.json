@@ -1,0 +1,6 @@
+{
+  "name": "Transaction Sentiment Ranker",
+  "description": "An application that performs visual sentiment analysis by ranking pictures from Pexels based on their chance to perform a transaction.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}
