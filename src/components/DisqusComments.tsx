@@ -11,11 +11,8 @@ export function DisqusComments({ query }: DisqusCommentsProps) {
   const shortname = 'proptrust';
 
   useEffect(() => {
-    // Only initialize or reset Disqus when the panel is expanded
-    // This prevents Disqus from rendering into a 0-height container
-    if (!isExpanded) return;
-
-    const timer = setTimeout(() => {
+    // Only inject the script once
+    const injectDisqus = () => {
       (window as any).disqus_config = function (this: any) {
         this.page.url = window.location.href;
         this.page.identifier = pageIdentifier;
@@ -27,24 +24,27 @@ export function DisqusComments({ query }: DisqusCommentsProps) {
           config: (window as any).disqus_config,
         });
       } else {
-        const d = document, s = d.createElement('script');
+        const d = document,
+          s = d.createElement('script');
         s.src = `https://${shortname}.disqus.com/embed.js`;
         s.setAttribute('data-timestamp', (+new Date()).toString());
         (d.head || d.body).appendChild(s);
       }
-    }, 150); // Small delay to ensure the DOM has updated and transition started
+    };
 
+    // Small delay to ensure the container is in the DOM
+    const timer = setTimeout(injectDisqus, 200);
     return () => clearTimeout(timer);
-  }, [isExpanded, pageIdentifier, shortname]);
+  }, [pageIdentifier, shortname]);
 
   return (
     <div className="fixed bottom-6 right-6 z-50 flex flex-col items-end">
       {/* Expanded Panel */}
       <div
-        className={`transition-all duration-300 ease-in-out origin-bottom-right bg-white rounded-2xl shadow-2xl border border-gray-100 flex flex-col overflow-hidden mb-4 ${
+        className={`transition-all duration-300 ease-in-out origin-bottom-right bg-white rounded-2xl shadow-2xl border border-gray-100 flex flex-col overflow-hidden mb-4 absolute bottom-[4rem] right-0 w-[400px] max-w-[calc(100vw-3rem)] h-[600px] max-h-[calc(100vh-8rem)] ${
           isExpanded
-            ? 'scale-100 opacity-100 w-[400px] max-w-[calc(100vw-3rem)] h-[600px] max-h-[calc(100vh-8rem)]'
-            : 'scale-95 opacity-0 w-[400px] max-w-[calc(100vw-3rem)] h-[0px] pointer-events-none'
+            ? 'scale-100 opacity-100 pointer-events-auto'
+            : 'scale-90 opacity-0 pointer-events-none'
         }`}
       >
         {/* Header */}
@@ -60,7 +60,8 @@ export function DisqusComments({ query }: DisqusCommentsProps) {
         </div>
         {/* Comments Container */}
         <div className="flex-1 overflow-y-auto p-4 bg-white relative">
-          {isExpanded && <div id="disqus_thread"></div>}
+          {/* Unconditionally rendered so Disqus can initialize even while hidden */}
+          <div id="disqus_thread"></div>
           <noscript>
             Please enable JavaScript to view the{' '}
             <a href="https://disqus.com/?ref_noscript">comments powered by Disqus.</a>
@@ -72,7 +73,7 @@ export function DisqusComments({ query }: DisqusCommentsProps) {
       <button
         onClick={() => setIsExpanded(!isExpanded)}
         className={`flex items-center justify-center p-4 bg-gray-900 text-white rounded-full shadow-lg hover:bg-gray-800 hover:shadow-xl transition-all transform hover:scale-105 active:scale-95 ${
-          isExpanded ? 'scale-0 opacity-0 absolute' : 'scale-100 opacity-100'
+          isExpanded ? 'scale-0 opacity-0 pointer-events-none' : 'scale-100 opacity-100 pointer-events-auto'
         }`}
         aria-label="Toggle comments"
       >
@@ -81,4 +82,5 @@ export function DisqusComments({ query }: DisqusCommentsProps) {
     </div>
   );
 }
+
 
