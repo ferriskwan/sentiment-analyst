@@ -1,225 +1,359 @@
-import { useState, useEffect } from 'react';
-import { Reorder, AnimatePresence, motion } from 'motion/react';
-import { GripVertical, AlertCircle, Loader2, Check } from 'lucide-react';
+import React, { useState, useEffect, useCallback, useMemo } from 'react';
+import { Header } from './components/Header';
+import { SearchBar } from './components/SearchBar';
+import { CategoryPills } from './components/CategoryPills';
+import { FilterBar } from './components/FilterBar';
+import { MediaGrid } from './components/MediaGrid';
+import { MediaModal } from './components/MediaModal';
+import { FavoritesDrawer } from './components/FavoritesDrawer';
+import { Photo, Video, MediaType, FeedSection, FilterState, FavoriteItem } from './types';
+import { FALLBACK_PHOTOS, FALLBACK_VIDEOS } from './data/fallbackMedia';
 
-interface Photo {
-  id: number;
-  url: string;
-  src: {
-    original: string;
-    large2x: string;
-    large: string;
-    medium: string;
-    small: string;
-    portrait: string;
-    landscape: string;
-    tiny: string;
-  };
-  alt: string;
-  photographer: string;
-}
+const INITIAL_FILTERS: FilterState = {
+  orientation: 'all',
+  size: 'all',
+  color: 'all',
+};
 
-function DisqusComments() {
-  useEffect(() => {
-    // Define disqus config on window to prevent initialization errors
-    (window as any).disqus_config = function () {
-      this.page.url = window.location.href;
-      this.page.identifier = 'sentiment-analysis-app';
-    };
-
-    // Prevent multiple scripts from being added
-    if (!document.getElementById('disqus-embed-script')) {
-      const script = document.createElement('script');
-      script.src = 'https://sentiment-analysis.disqus.com/embed.js';
-      script.setAttribute('data-timestamp', new Date().getTime().toString());
-      script.id = 'disqus-embed-script';
-      script.async = true;
-      (document.head || document.body).appendChild(script);
-    } else if ((window as any).DISQUS) {
-      (window as any).DISQUS.reset({
-        reload: true,
-        config: function () {
-          this.page.url = window.location.href;
-          this.page.identifier = 'sentiment-analysis-app';
-        }
-      });
-    }
-  }, []);
-
-  return (
-    <div className="w-full mt-12 pt-8 border-t border-gray-100">
-      <div id="disqus_thread"></div>
-      <noscript>Please enable JavaScript to view the <a href="https://disqus.com/?ref_noscript">comments powered by Disqus.</a></noscript>
-    </div>
-  );
-}
+const FAVORITES_STORAGE_KEY = 'pexels_saved_favorites_v1';
 
 export default function App() {
+  const [mediaType, setMediaType] = useState<MediaType>('photos');
+  const [section, setSection] = useState<FeedSection>('curated');
+  const [query, setQuery] = useState('');
+  const [filters, setFilters] = useState<FilterState>(INITIAL_FILTERS);
+  const [isFilterOpen, setIsFilterOpen] = useState(false);
+
+  // Data states
   const [photos, setPhotos] = useState<Photo[]>([]);
-  const [loading, setLoading] = useState(true);
+  const [videos, setVideos] = useState<Video[]>([]);
+  const [page, setPage] = useState(1);
+  const [totalResults, setTotalResults] = useState<number | undefined>(undefined);
+  const [hasMore, setHasMore] = useState(true);
+  const [isLoading, setIsLoading] = useState(true);
+  const [isLoadingMore, setIsLoadingMore] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [submitted, setSubmitted] = useState(false);
+  const [hasApiKey, setHasApiKey] = useState(true);
 
+  // Modal preview state
+  const [selectedItem, setSelectedItem] = useState<Photo | Video | null>(null);
+  const [isModalOpen, setIsModalOpen] = useState(false);
+
+  // Favorites state persisted in localStorage
+  const [favorites, setFavorites] = useState<FavoriteItem[]>(() => {
+    try {
+      const saved = localStorage.getItem(FAVORITES_STORAGE_KEY);
+      return saved ? JSON.parse(saved) : [];
+    } catch {
+      return [];
+    }
+  });
+  const [isFavoritesOpen, setIsFavoritesOpen] = useState(false);
+
+  // Save favorites to localStorage
   useEffect(() => {
-    fetch('/api/images')
-      .then(async (res) => {
-        const contentType = res.headers.get('content-type');
-        if (!contentType || !contentType.includes('application/json')) {
-          throw new Error('Server returned an invalid response format (not JSON). Ensure your API route is deployed correctly on Vercel.');
-        }
-        return res.json();
-      })
-      .then((data) => {
-        if (data.error) {
-          setError(data.error);
-        } else if (data.photos) {
-          setPhotos(data.photos);
-        }
-      })
-      .catch((err) => {
-        setError(err.message);
-      })
-      .finally(() => {
-        setLoading(false);
-      });
-  }, []);
+    try {
+      localStorage.setItem(FAVORITES_STORAGE_KEY, JSON.stringify(favorites));
+    } catch (e) {
+      console.error('Failed to persist favorites:', e);
+    }
+  }, [favorites]);
 
-  const handleSubmit = () => {
-    setSubmitted(true);
-    setTimeout(() => setSubmitted(false), 3000);
+  // Count active filters
+  const activeFilterCount = useMemo(() => {
+    let count = 0;
+    if (filters.orientation !== 'all') count++;
+    if (filters.size !== 'all') count++;
+    if (filters.color !== 'all' && filters.color !== '') count++;
+    return count;
+  }, [filters]);
+
+  // Main fetch function for media
+  const fetchMedia = useCallback(
+    async (pageToFetch: number, isLoadMore = false) => {
+      if (isLoadMore) {
+        setIsLoadingMore(true);
+      } else {
+        setIsLoading(true);
+        setError(null);
+      }
+
+      try {
+        const params = new URLSearchParams();
+        params.append('type', mediaType);
+        params.append('section', section);
+        params.append('page', pageToFetch.toString());
+        params.append('per_page', '24');
+
+        if (query) {
+          params.append('query', query);
+        }
+        if (filters.orientation !== 'all') {
+          params.append('orientation', filters.orientation);
+        }
+        if (filters.size !== 'all') {
+          params.append('size', filters.size);
+        }
+        if (filters.color !== 'all' && filters.color !== '') {
+          params.append('color', filters.color);
+        }
+
+        const res = await fetch(`/api/media?${params.toString()}`);
+        if (!res.ok) {
+          throw new Error(`Server returned ${res.status}: ${res.statusText}`);
+        }
+
+        const data = await res.json();
+        setHasApiKey(data.hasApiKey !== false);
+
+        if (data.error && data.photos?.length === 0 && data.videos?.length === 0) {
+          throw new Error(data.error);
+        }
+
+        // Handle live results or fallback demo data when API key is unconfigured
+        if (mediaType === 'photos') {
+          let fetchedPhotos: Photo[] = data.photos || [];
+          if (!data.hasApiKey && fetchedPhotos.length === 0) {
+            // Filter fallback photos locally
+            fetchedPhotos = FALLBACK_PHOTOS.filter((p) => {
+              if (query) {
+                const q = query.toLowerCase();
+                return p.alt.toLowerCase().includes(q) || p.photographer.toLowerCase().includes(q);
+              }
+              return true;
+            });
+          }
+
+          if (isLoadMore) {
+            setPhotos((prev) => [...prev, ...fetchedPhotos]);
+          } else {
+            setPhotos(fetchedPhotos);
+          }
+
+          setTotalResults(data.total_results || fetchedPhotos.length);
+          setHasMore(Boolean(data.next_page || (!data.hasApiKey && pageToFetch === 1 && fetchedPhotos.length > 0)));
+        } else {
+          // Videos
+          let fetchedVideos: Video[] = data.videos || [];
+          if (!data.hasApiKey && fetchedVideos.length === 0) {
+            fetchedVideos = FALLBACK_VIDEOS.filter((v) => {
+              if (query) {
+                const q = query.toLowerCase();
+                return (v.user?.name || '').toLowerCase().includes(q);
+              }
+              return true;
+            });
+          }
+
+          if (isLoadMore) {
+            setVideos((prev) => [...prev, ...fetchedVideos]);
+          } else {
+            setVideos(fetchedVideos);
+          }
+
+          setTotalResults(data.total_results || fetchedVideos.length);
+          setHasMore(Boolean(data.next_page || (!data.hasApiKey && pageToFetch === 1 && fetchedVideos.length > 0)));
+        }
+      } catch (err: any) {
+        console.error('Fetch error:', err);
+        setError(err.message || 'Failed to retrieve media results.');
+        // If error occurred and no data exists, supply fallback demo media
+        if (!isLoadMore) {
+          if (mediaType === 'photos') {
+            setPhotos(FALLBACK_PHOTOS);
+          } else {
+            setVideos(FALLBACK_VIDEOS);
+          }
+        }
+      } finally {
+        setIsLoading(false);
+        setIsLoadingMore(false);
+      }
+    },
+    [mediaType, section, query, filters]
+  );
+
+  // Trigger initial or filter change fetch
+  useEffect(() => {
+    setPage(1);
+    fetchMedia(1, false);
+  }, [fetchMedia]);
+
+  // Load next page
+  const handleLoadMore = () => {
+    if (isLoadingMore || !hasMore) return;
+    const nextPage = page + 1;
+    setPage(nextPage);
+    fetchMedia(nextPage, true);
   };
 
-  if (loading) {
-    return (
-      <div className="min-h-screen flex items-center justify-center bg-[#FDFDFD]">
-        <Loader2 className="w-8 h-8 animate-spin text-gray-300" />
-      </div>
-    );
-  }
+  // Search & Category handlers
+  const handleSearch = (newQuery: string) => {
+    setQuery(newQuery);
+  };
 
-  if (error) {
-    return (
-      <div className="min-h-screen flex items-center justify-center bg-[#FDFDFD] p-6">
-        <div className="bg-white text-[#1A1A1A] p-6 flex items-start gap-4 max-w-md border border-gray-200 rounded-sm">
-          <AlertCircle className="w-5 h-5 shrink-0 text-red-500" />
-          <div>
-            <h3 className="text-xs uppercase tracking-[0.1em] font-bold mb-2">Configuration Error</h3>
-            <p className="text-xs text-gray-500 leading-relaxed">{error}</p>
-            <p className="text-xs text-gray-500 leading-relaxed mt-2">
-              Please ensure you have added a valid PEXELS_API_KEY in the application settings.
-            </p>
-          </div>
-        </div>
-      </div>
-    );
-  }
+  const handleClearSearch = () => {
+    setQuery('');
+  };
+
+  const handleSelectCategory = (catQuery: string) => {
+    setQuery(catQuery);
+  };
+
+  // Filter modifications
+  const handleFilterChange = (newFilters: Partial<FilterState>) => {
+    setFilters((prev) => ({ ...prev, ...newFilters }));
+  };
+
+  const handleResetFilters = () => {
+    setFilters(INITIAL_FILTERS);
+  };
+
+  // Favorites handler
+  const handleToggleFavorite = (item: Photo | Video) => {
+    const itemType: MediaType = 'src' in item ? 'photos' : 'videos';
+    const key = `${itemType.slice(0, -1)}-${item.id}`;
+
+    setFavorites((prev) => {
+      const exists = prev.some((f) => f.id === key);
+      if (exists) {
+        return prev.filter((f) => f.id !== key);
+      } else {
+        return [{ id: key, type: itemType, item, savedAt: Date.now() }, ...prev];
+      }
+    });
+  };
+
+  const handleRemoveFavorite = (id: string) => {
+    setFavorites((prev) => prev.filter((f) => f.id !== id));
+  };
+
+  const handleClearAllFavorites = () => {
+    setFavorites([]);
+  };
+
+  // Modal open & selection handlers
+  const handleSelectPhoto = (photo: Photo) => {
+    setSelectedItem(photo);
+    setMediaType('photos');
+    setIsModalOpen(true);
+  };
+
+  const handleSelectVideo = (video: Video) => {
+    setSelectedItem(video);
+    setMediaType('videos');
+    setIsModalOpen(true);
+  };
+
+  const handleSelectFavoriteMedia = (item: Photo | Video, type: MediaType) => {
+    setSelectedItem(item);
+    setMediaType(type);
+    setIsFavoritesOpen(false);
+    setIsModalOpen(true);
+  };
+
+  // Related items for modal
+  const relatedItems = useMemo(() => {
+    if (!selectedItem) return [];
+    if (mediaType === 'photos') {
+      return photos.filter((p) => p.id !== selectedItem.id).slice(0, 8);
+    } else {
+      return videos.filter((v) => v.id !== selectedItem.id).slice(0, 8);
+    }
+  }, [selectedItem, mediaType, photos, videos]);
+
+  const isCurrentItemFavorite = useMemo(() => {
+    if (!selectedItem) return false;
+    const key = `${mediaType.slice(0, -1)}-${selectedItem.id}`;
+    return favorites.some((f) => f.id === key);
+  }, [selectedItem, mediaType, favorites]);
 
   return (
-    <div className="min-h-screen bg-[#FDFDFD] text-[#1A1A1A] flex flex-col font-sans">
-      {/* Geometric Header */}
-      <header className="h-20 px-6 md:px-10 border-b border-gray-100 flex items-center justify-between shrink-0 bg-white sticky top-0 z-10">
-        <div className="flex items-center gap-3">
-          <div className="hidden md:flex w-8 h-8 bg-black rounded-full items-center justify-center shrink-0">
-            <div className="w-3 h-3 bg-white rotate-45"></div>
-          </div>
-          <h1 className="text-xl font-bold tracking-tight text-[#1A1A1A] flex flex-wrap items-center">
-            VISUAL IMPACT <span className="font-light text-gray-400 ml-1">/ Ranker v1.0</span>
-          </h1>
+    <div className="min-h-screen bg-[#FAFAFA] text-zinc-900 flex flex-col font-sans selection:bg-zinc-900 selection:text-white">
+      {/* Primary Navigation & Section Tabs */}
+      <Header
+        mediaType={mediaType}
+        setMediaType={setMediaType}
+        section={section}
+        setSection={(sec) => {
+          setSection(sec);
+          setQuery(''); // Reset query when exploring distinct sections
+        }}
+        favoriteCount={favorites.length}
+        onOpenFavorites={() => setIsFavoritesOpen(true)}
+        hasApiKey={hasApiKey}
+      />
+
+      {/* Main App Canvas */}
+      <main className="flex-1 max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6 sm:py-8 w-full space-y-6">
+        {/* Search Bar & Instant Filter Trigger */}
+        <div className="space-y-3">
+          <SearchBar
+            query={query}
+            onSearch={handleSearch}
+            onClear={handleClearSearch}
+            isFilterOpen={isFilterOpen}
+            onToggleFilter={() => setIsFilterOpen(!isFilterOpen)}
+            activeFilterCount={activeFilterCount}
+          />
+
+          {/* Category Quick Pills */}
+          <CategoryPills
+            selectedCategory={query}
+            onSelectCategory={handleSelectCategory}
+          />
+
+          {/* Expandable Refinement Filter Bar */}
+          {isFilterOpen && (
+            <FilterBar
+              filters={filters}
+              onFilterChange={handleFilterChange}
+              onReset={handleResetFilters}
+              mediaType={mediaType}
+            />
+          )}
         </div>
-        
-        <div className="flex items-center gap-6">
-          <div className="hidden md:block text-right">
-            <p className="text-[10px] uppercase tracking-widest text-gray-400 leading-none">Task Mode</p>
-            <p className="text-xs font-semibold">TRANSACTION_LIKELIHOOD</p>
-          </div>
-          <div className="hidden md:block h-10 w-[1px] bg-gray-200"></div>
-          <button
-            onClick={handleSubmit}
-            className="bg-black text-white px-4 md:px-6 py-2 rounded-sm text-[10px] md:text-xs font-bold uppercase tracking-[0.2em] hover:bg-gray-800 transition-colors flex items-center gap-2 whitespace-nowrap"
-          >
-            {submitted ? (
-              <>
-                <Check className="w-4 h-4" />
-                Saved
-              </>
-            ) : (
-              'Submit Ranking'
-            )}
-          </button>
-        </div>
-      </header>
 
-      <main className="flex-1 p-6 md:p-10 max-w-4xl mx-auto w-full">
-        <div className="flex justify-between items-baseline mb-6 border-b border-gray-100 pb-4">
-          <h2 className="text-xs uppercase tracking-[0.2em] font-bold text-gray-500">Analysis Pool (5 Subjects)</h2>
-          <p className="text-[11px] italic text-gray-400 hidden sm:block">Drag items to rank by transaction likelihood</p>
-        </div>
-        <Reorder.Group
-          axis="y"
-          values={photos}
-          onReorder={setPhotos}
-          className="space-y-3"
-        >
-          <AnimatePresence>
-            {photos.map((photo, index) => (
-              <Reorder.Item
-                key={photo.id}
-                value={photo}
-                className="bg-white border border-gray-200 rounded-lg p-4 flex items-center gap-4 cursor-grab active:cursor-grabbing relative transition-all hover:border-black group select-none shadow-sm"
-                initial={{ opacity: 0, y: 20 }}
-                animate={{ opacity: 1, y: 0 }}
-                exit={{ opacity: 0, scale: 0.95 }}
-                transition={{ duration: 0.3, delay: index * 0.05 }}
-              >
-                {/* Rank Indicator */}
-                <span className="text-3xl font-display italic text-gray-300 w-12 text-center shrink-0 transition-colors group-hover:text-gray-900">
-                  {(index + 1).toString().padStart(2, '0')}
-                </span>
-
-                {/* Image Container */}
-                <div className="w-16 h-16 sm:w-24 sm:h-24 shrink-0 rounded-sm overflow-hidden bg-gray-100 relative group-active:scale-95 transition-transform duration-300">
-                  <img
-                    src={photo.src.large}
-                    alt={photo.alt}
-                    className="w-full h-full object-cover pointer-events-none"
-                    draggable={false}
-                  />
-                </div>
-
-                {/* Content */}
-                <div className="flex-1 min-w-0">
-                  <p className="text-xs font-bold uppercase tracking-widest text-gray-900 truncate">
-                    {photo.alt || 'Scene_Untitled'}
-                  </p>
-                  <p className="text-[10px] uppercase text-gray-400 tracking-widest truncate mt-1">
-                    SRC // {photo.photographer}
-                  </p>
-                  
-                  <div className="mt-3 flex sm:hidden items-center gap-1 text-gray-400 text-[10px] font-bold uppercase tracking-widest">
-                    <GripVertical className="w-3 h-3" />
-                    Drag to move
-                  </div>
-                </div>
-
-                {/* Drag Handle Desktop */}
-                <div className="hidden sm:flex shrink-0 w-12 h-12 items-center justify-center text-gray-300 group-hover:text-gray-600 transition-colors">
-                  <GripVertical className="w-5 h-5" />
-                </div>
-              </Reorder.Item>
-            ))}
-          </AnimatePresence>
-        </Reorder.Group>
-
-        <DisqusComments />
+        {/* Media Grid (Photos / Videos with Masonry & Live Infinite Scroll) */}
+        <MediaGrid
+          mediaType={mediaType}
+          photos={photos}
+          videos={videos}
+          isLoading={isLoading}
+          isLoadingMore={isLoadingMore}
+          hasMore={hasMore}
+          onLoadMore={handleLoadMore}
+          favorites={favorites}
+          onToggleFavorite={handleToggleFavorite}
+          onSelectPhoto={handleSelectPhoto}
+          onSelectVideo={handleSelectVideo}
+          onRetry={() => fetchMedia(1, false)}
+          error={error}
+          totalResults={totalResults}
+        />
       </main>
 
-      <footer className="h-12 px-6 md:px-10 border-t border-gray-100 flex items-center justify-between shrink-0 bg-white mt-auto">
-        <div className="flex gap-4 md:gap-8">
-          <p className="text-[10px] text-gray-400"><span className="font-bold text-gray-600 mr-1">LATENCY</span> 14ms</p>
-          <p className="text-[10px] text-gray-400 hidden sm:block"><span className="font-bold text-gray-600 mr-1">API_STATUS</span> STABLE</p>
-        </div>
-        <p className="text-[10px] text-gray-400 uppercase tracking-widest">Systems active &copy; {new Date().getFullYear()}</p>
-      </footer>
+      {/* Full Preview Modal */}
+      <MediaModal
+        item={selectedItem}
+        type={mediaType}
+        isOpen={isModalOpen}
+        onClose={() => setIsModalOpen(false)}
+        isFavorite={isCurrentItemFavorite}
+        onToggleFavorite={handleToggleFavorite}
+        relatedItems={relatedItems}
+        onSelectRelated={(item) => setSelectedItem(item)}
+      />
+
+      {/* Favorites Slide-over Drawer */}
+      <FavoritesDrawer
+        isOpen={isFavoritesOpen}
+        onClose={() => setIsFavoritesOpen(false)}
+        favorites={favorites}
+        onRemoveFavorite={handleRemoveFavorite}
+        onClearAll={handleClearAllFavorites}
+        onSelectMedia={handleSelectFavoriteMedia}
+      />
     </div>
   );
 }
