@@ -101,7 +101,7 @@ export const Header: React.FC<HeaderProps> = ({
               title="View and export check-out"
             >
               <Database className="w-4 h-4 text-zinc-500" />
-              <span className="hidden sm:inline">Check-out</span>
+              <span className="hidden sm:inline">Purchase high definition pics</span>
             </button>
 
             <button

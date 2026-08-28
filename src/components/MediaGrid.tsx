@@ -305,27 +305,43 @@ export const MediaGrid: React.FC<MediaGridProps> = ({
           <div className="flex flex-col gap-4 max-w-4xl mx-auto w-full">
             {mediaType === 'photos' ? (
               photos.map((photo, index) => (
-                <SortableItem 
-                  key={photo.id} 
-                  id={photo.id} 
-                  index={index}
-                  imageUrl={photo.src.medium || photo.src.original}
-                  title={photo.alt || `Visual Subject ${photo.id}`}
-                  author={photo.photographer}
-                  onSelect={() => onSelectPhoto(photo)}
-                />
+                <React.Fragment key={photo.id}>
+                  <SortableItem 
+                    id={photo.id} 
+                    index={index}
+                    imageUrl={photo.src.medium || photo.src.original}
+                    title={photo.alt || `Visual Subject ${photo.id}`}
+                    author={photo.photographer}
+                    onSelect={() => onSelectPhoto(photo)}
+                  />
+                  {index === 2 && photos.length > 3 && (
+                    <div className="w-full border-t-2 border-dotted border-zinc-300 my-2 relative">
+                      <div className="absolute -top-2.5 left-1/2 -translate-x-1/2 bg-white px-3 text-[10px] uppercase font-bold text-zinc-400 tracking-widest">
+                        Cut-off for Purchase
+                      </div>
+                    </div>
+                  )}
+                </React.Fragment>
               ))
             ) : (
               videos.map((video, index) => (
-                <SortableItem 
-                  key={video.id} 
-                  id={video.id} 
-                  index={index}
-                  imageUrl={video.image}
-                  title={`Motion Subject ${video.id}`}
-                  author={video.user.name}
-                  onSelect={() => onSelectVideo(video)}
-                />
+                <React.Fragment key={video.id}>
+                  <SortableItem 
+                    id={video.id} 
+                    index={index}
+                    imageUrl={video.image}
+                    title={`Motion Subject ${video.id}`}
+                    author={video.user.name}
+                    onSelect={() => onSelectVideo(video)}
+                  />
+                  {index === 2 && videos.length > 3 && (
+                    <div className="w-full border-t-2 border-dotted border-zinc-300 my-2 relative">
+                      <div className="absolute -top-2.5 left-1/2 -translate-x-1/2 bg-white px-3 text-[10px] uppercase font-bold text-zinc-400 tracking-widest">
+                        Cut-off for Purchase
+                      </div>
+                    </div>
+                  )}
+                </React.Fragment>
               ))
             )}
           </div>

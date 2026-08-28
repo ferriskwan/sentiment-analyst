@@ -120,7 +120,7 @@ export const ExportRankingsModal: React.FC<ExportRankingsModalProps> = ({
             </div>
             <div>
               <div className="flex items-center gap-2">
-                <h2 className="text-base font-bold text-zinc-900">Check-out</h2>
+                <h2 className="text-base font-bold text-zinc-900">Purchase high definition pics</h2>
                 <span className="text-xs text-zinc-500 font-mono bg-zinc-100 px-2 py-0.5 rounded-full border border-zinc-200">
                   {savedRankings.length}
                 </span>
@@ -156,7 +156,7 @@ export const ExportRankingsModal: React.FC<ExportRankingsModalProps> = ({
               >
                 <div className="flex items-center gap-2">
                   <Download className="w-4 h-4" />
-                  <span>Check Out All as JSON</span>
+                  <span>Purchase</span>
                 </div>
                 <div className="flex items-center gap-2 bg-zinc-800 px-3 py-1.5 rounded-lg border border-zinc-700">
                   <span className="text-[10px] text-zinc-400">Total Cost:</span>
