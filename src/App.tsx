@@ -79,6 +79,29 @@ export default function App() {
         setError(null);
       }
 
+      // Intercept and load saved ranking snapshot if it exists for this query
+      if (pageToFetch === 1) {
+        const payloadKey = `saved-payload-${mediaType}-${query || 'home'}`;
+        const savedPayload = sessionStorage.getItem(payloadKey);
+        if (savedPayload) {
+          try {
+            const parsed = JSON.parse(savedPayload);
+            if (mediaType === 'photos') {
+              setPhotos(parsed);
+              setTotalResults(parsed.length);
+            } else {
+              setVideos(parsed);
+              setTotalResults(parsed.length);
+            }
+            setHasMore(false); // Disable infinite scroll for saved snapshots
+            setIsLoading(false);
+            return;
+          } catch (e) {
+            console.error("Failed to parse saved ranking payload", e);
+          }
+        }
+      }
+
       try {
         const params = new URLSearchParams();
         params.append('type', mediaType);
@@ -238,6 +261,15 @@ export default function App() {
     }
   }, [mediaType, query]);
 
+  const handleSaveRanking = useCallback(() => {
+    const payloadKey = `saved-payload-${mediaType}-${query || 'home'}`;
+    if (mediaType === 'photos') {
+      sessionStorage.setItem(payloadKey, JSON.stringify(photos));
+    } else {
+      sessionStorage.setItem(payloadKey, JSON.stringify(videos));
+    }
+  }, [mediaType, query, photos, videos]);
+
   // Search & Category handlers
   const handleSearch = (newQuery: string) => {
     setQuery(newQuery);
@@ -379,6 +411,7 @@ export default function App() {
           onSelectPhoto={handleSelectPhoto}
           onSelectVideo={handleSelectVideo}
           onReorder={handleReorder}
+          onSaveRanking={handleSaveRanking}
           onRetry={() => fetchMedia(1, false)}
           error={error}
           totalResults={totalResults}

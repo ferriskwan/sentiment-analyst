@@ -1,5 +1,5 @@
-import React, { useEffect, useRef } from 'react';
-import { Loader2, AlertCircle, RefreshCw, Sparkles, Image as ImageIcon, GripVertical } from 'lucide-react';
+import React, { useEffect, useRef, useState } from 'react';
+import { Loader2, AlertCircle, RefreshCw, Sparkles, Image as ImageIcon, GripVertical, Check } from 'lucide-react';
 import {
   DndContext,
   closestCenter,
@@ -107,6 +107,7 @@ interface MediaGridProps {
   onSelectPhoto: (photo: Photo) => void;
   onSelectVideo: (video: Video) => void;
   onReorder?: (oldIndex: number, newIndex: number) => void;
+  onSaveRanking?: () => void;
   onRetry: () => void;
   error: string | null;
   totalResults?: number;
@@ -125,11 +126,21 @@ export const MediaGrid: React.FC<MediaGridProps> = ({
   onSelectPhoto,
   onSelectVideo,
   onReorder,
+  onSaveRanking,
   onRetry,
   error,
   totalResults,
 }) => {
   const sentinelRef = useRef<HTMLDivElement | null>(null);
+  const [isSaved, setIsSaved] = useState(false);
+
+  const handleSaveClick = () => {
+    if (onSaveRanking) {
+      onSaveRanking();
+    }
+    setIsSaved(true);
+    setTimeout(() => setIsSaved(false), 2000);
+  };
 
   const sensors = useSensors(
     useSensor(PointerSensor, {
@@ -255,9 +266,29 @@ export const MediaGrid: React.FC<MediaGridProps> = ({
         <h2 className="text-xs font-bold uppercase tracking-[0.15em] text-zinc-500">
           ANALYSIS POOL ({itemsCount} SUBJECTS)
         </h2>
-        <span className="text-[11px] font-medium italic text-zinc-400">
-          Drag items to rank by transaction likelihood
-        </span>
+        <div className="flex items-center gap-4">
+          <span className="text-[11px] font-medium italic text-zinc-400 hidden sm:block">
+            Drag items to rank by transaction likelihood
+          </span>
+          <button 
+            onClick={handleSaveClick}
+            disabled={isSaved}
+            className={`flex items-center gap-2 px-5 py-2 text-[10px] font-bold uppercase tracking-widest rounded-full transition-all border ${
+              isSaved 
+                ? 'bg-green-50 text-green-700 border-green-200' 
+                : 'bg-white text-zinc-800 border-zinc-300 hover:border-zinc-500 hover:bg-zinc-50 cursor-pointer'
+            }`}
+          >
+            {isSaved ? (
+              <>
+                <Check className="w-3.5 h-3.5" />
+                Saved
+              </>
+            ) : (
+              'Save Ranking'
+            )}
+          </button>
+        </div>
       </div>
 
       {/* Media List: Sortable Vertical Rows */}
