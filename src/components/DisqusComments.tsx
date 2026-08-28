@@ -25,7 +25,7 @@ export function DisqusComments({ query }: DisqusCommentsProps) {
       (function() { // DON'T EDIT BELOW THIS LINE
         var d = document, s = d.createElement('script');
         s.id = 'disqus-embed-script'; // Added to prevent duplicate injections in React StrictMode
-        s.src = 'https://sentiment-analysis.disqus.com/embed.js';
+        s.src = 'https://sentiment-analysis-1.disqus.com/embed.js';
         s.setAttribute('data-timestamp', (+new Date()).toString());
         (d.head || d.body).appendChild(s);
       })();
