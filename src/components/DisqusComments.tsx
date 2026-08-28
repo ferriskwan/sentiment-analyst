@@ -1,9 +1,21 @@
 import React, { useEffect } from 'react';
 
-export function DisqusComments() {
+interface DisqusCommentsProps {
+  query: string;
+}
+
+export function DisqusComments({ query }: DisqusCommentsProps) {
   useEffect(() => {
-    // Check if the script is already loaded to avoid duplicates on hot reloads
+    // Define the disqus config globally so the embed script picks it up, or reset uses it.
+    const config = function (this: any) {
+      this.page.identifier = query || 'home';
+      this.page.url = window.location.href;
+      this.page.title = query ? `Search: ${query}` : 'Home';
+    };
+
     if (!document.getElementById('disqus-script')) {
+      (window as any).disqus_config = config;
+      
       const script = document.createElement('script');
       script.id = 'disqus-script';
       script.src = 'https://sentiment-analysis.disqus.com/embed.js';
@@ -11,14 +23,15 @@ export function DisqusComments() {
       script.async = true;
       (document.head || document.body).appendChild(script);
     } else {
-      // If DISQUS is already loaded globally, we can attempt to reset it.
+      // If DISQUS is already loaded globally, reset it for the new query.
       if ((window as any).DISQUS) {
         (window as any).DISQUS.reset({
-          reload: true
+          reload: true,
+          config: config
         });
       }
     }
-  }, []);
+  }, [query]);
 
   return (
     <div className="w-full max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12">

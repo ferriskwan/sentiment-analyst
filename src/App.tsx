@@ -335,7 +335,7 @@ export default function App() {
         
         {/* Disqus Comments */}
         <div className="border-t border-gray-100 bg-white">
-          <DisqusComments />
+          <DisqusComments query={query} />
         </div>
       </main>
 
