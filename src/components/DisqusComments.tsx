@@ -28,11 +28,15 @@ export function DisqusComments({ query }: DisqusCommentsProps) {
       (d.head || d.body).appendChild(s);
     } else {
       // If script is already loaded (e.g. user navigated routes), we just reset Disqus
-      if ((window as any).DISQUS) {
-        (window as any).DISQUS.reset({
-          reload: true,
-          config: (window as any).disqus_config
-        });
+      if ((window as any).DISQUS && typeof (window as any).DISQUS.reset === 'function') {
+        try {
+          (window as any).DISQUS.reset({
+            reload: true,
+            config: (window as any).disqus_config
+          });
+        } catch (error) {
+          console.error("Disqus reset failed", error);
+        }
       }
     }
   }, [pageIdentifier]);
