@@ -19,6 +19,41 @@ interface Photo {
   photographer: string;
 }
 
+function DisqusComments() {
+  useEffect(() => {
+    // Define disqus config on window to prevent initialization errors
+    (window as any).disqus_config = function () {
+      this.page.url = window.location.href;
+      this.page.identifier = 'sentiment-analysis-app';
+    };
+
+    // Prevent multiple scripts from being added
+    if (!document.getElementById('disqus-embed-script')) {
+      const script = document.createElement('script');
+      script.src = 'https://sentiment-analysis.disqus.com/embed.js';
+      script.setAttribute('data-timestamp', new Date().getTime().toString());
+      script.id = 'disqus-embed-script';
+      script.async = true;
+      (document.head || document.body).appendChild(script);
+    } else if ((window as any).DISQUS) {
+      (window as any).DISQUS.reset({
+        reload: true,
+        config: function () {
+          this.page.url = window.location.href;
+          this.page.identifier = 'sentiment-analysis-app';
+        }
+      });
+    }
+  }, []);
+
+  return (
+    <div className="w-full mt-12 pt-8 border-t border-gray-100">
+      <div id="disqus_thread"></div>
+      <noscript>Please enable JavaScript to view the <a href="https://disqus.com/?ref_noscript">comments powered by Disqus.</a></noscript>
+    </div>
+  );
+}
+
 export default function App() {
   const [photos, setPhotos] = useState<Photo[]>([]);
   const [loading, setLoading] = useState(true);
@@ -168,6 +203,8 @@ export default function App() {
             ))}
           </AnimatePresence>
         </Reorder.Group>
+
+        <DisqusComments />
       </main>
 
       <footer className="h-12 px-6 md:px-10 border-t border-gray-100 flex items-center justify-between shrink-0 bg-white mt-auto">
