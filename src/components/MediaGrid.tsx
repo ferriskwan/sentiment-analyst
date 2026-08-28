@@ -94,11 +94,23 @@ export const MediaGrid: React.FC<MediaGridProps> = ({
   onToggleFavorite,
   onSelectPhoto,
   onSelectVideo,
+  onReorder,
   onRetry,
   error,
   totalResults,
 }) => {
   const sentinelRef = useRef<HTMLDivElement | null>(null);
+
+  const sensors = useSensors(
+    useSensor(PointerSensor, {
+      activationConstraint: {
+        distance: 5,
+      },
+    }),
+    useSensor(KeyboardSensor, {
+      coordinateGetter: sortableKeyboardCoordinates,
+    })
+  );
 
   // IntersectionObserver for seamless Infinite Scrolling
   useEffect(() => {
@@ -181,17 +193,6 @@ export const MediaGrid: React.FC<MediaGridProps> = ({
       </div>
     );
   }
-
-  const sensors = useSensors(
-    useSensor(PointerSensor, {
-      activationConstraint: {
-        distance: 5,
-      },
-    }),
-    useSensor(KeyboardSensor, {
-      coordinateGetter: sortableKeyboardCoordinates,
-    })
-  );
 
   const handleDragEnd = (event: DragEndEvent) => {
     const { active, over } = event;
