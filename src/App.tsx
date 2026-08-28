@@ -62,7 +62,13 @@ export default function App() {
 
   useEffect(() => {
     fetch('/api/images')
-      .then((res) => res.json())
+      .then(async (res) => {
+        const contentType = res.headers.get('content-type');
+        if (!contentType || !contentType.includes('application/json')) {
+          throw new Error('Server returned an invalid response format (not JSON). Ensure your API route is deployed correctly on Vercel.');
+        }
+        return res.json();
+      })
       .then((data) => {
         if (data.error) {
           setError(data.error);
