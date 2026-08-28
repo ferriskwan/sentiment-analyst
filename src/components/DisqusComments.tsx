@@ -11,23 +11,31 @@ export function DisqusComments({ query }: DisqusCommentsProps) {
   const shortname = 'proptrust';
 
   useEffect(() => {
-    (window as any).disqus_config = function (this: any) {
-      this.page.url = window.location.href;
-      this.page.identifier = pageIdentifier;
-    };
+    // Only initialize or reset Disqus when the panel is expanded
+    // This prevents Disqus from rendering into a 0-height container
+    if (!isExpanded) return;
 
-    if ((window as any).DISQUS) {
-      (window as any).DISQUS.reset({
-        reload: true,
-        config: (window as any).disqus_config,
-      });
-    } else {
-      const d = document, s = d.createElement('script');
-      s.src = `https://${shortname}.disqus.com/embed.js`;
-      s.setAttribute('data-timestamp', (+new Date()).toString());
-      (d.head || d.body).appendChild(s);
-    }
-  }, [pageIdentifier]);
+    const timer = setTimeout(() => {
+      (window as any).disqus_config = function (this: any) {
+        this.page.url = window.location.href;
+        this.page.identifier = pageIdentifier;
+      };
+
+      if ((window as any).DISQUS) {
+        (window as any).DISQUS.reset({
+          reload: true,
+          config: (window as any).disqus_config,
+        });
+      } else {
+        const d = document, s = d.createElement('script');
+        s.src = `https://${shortname}.disqus.com/embed.js`;
+        s.setAttribute('data-timestamp', (+new Date()).toString());
+        (d.head || d.body).appendChild(s);
+      }
+    }, 150); // Small delay to ensure the DOM has updated and transition started
+
+    return () => clearTimeout(timer);
+  }, [isExpanded, pageIdentifier, shortname]);
 
   return (
     <div className="fixed bottom-6 right-6 z-50 flex flex-col items-end">
@@ -52,7 +60,7 @@ export function DisqusComments({ query }: DisqusCommentsProps) {
         </div>
         {/* Comments Container */}
         <div className="flex-1 overflow-y-auto p-4 bg-white relative">
-          <div id="disqus_thread"></div>
+          {isExpanded && <div id="disqus_thread"></div>}
           <noscript>
             Please enable JavaScript to view the{' '}
             <a href="https://disqus.com/?ref_noscript">comments powered by Disqus.</a>
