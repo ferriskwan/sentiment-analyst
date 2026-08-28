@@ -66,7 +66,8 @@ export function DisqusComments({ query }: DisqusCommentsProps) {
         {/* Comments Container */}
         {/* We ALWAYS render the thread so the script can find it immediately on mount */}
         <div className="flex-1 overflow-y-auto p-4 bg-white relative w-full h-full">
-          <div id="disqus_thread" className="w-full min-h-[400px]"></div>
+          {/* Inline styles using hex codes prevent Disqus's older color parser from crashing on Tailwind v4's oklch() variables */}
+          <div id="disqus_thread" className="w-full min-h-[400px]" style={{ color: '#18181b', backgroundColor: '#ffffff' }}></div>
           <noscript>
             Please enable JavaScript to view the{' '}
             <a href="https://disqus.com/?ref_noscript">comments powered by Disqus.</a>
