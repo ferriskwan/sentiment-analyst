@@ -8,7 +8,7 @@ interface DisqusCommentsProps {
 export function DisqusComments({ query }: DisqusCommentsProps) {
   const [isExpanded, setIsExpanded] = useState(false);
   const pageIdentifier = query || 'home';
-  const shortname = 'sentiment-analysis-1';
+  const shortname = 'proptrust';
 
   useEffect(() => {
     (window as any).disqus_config = function (this: any) {
