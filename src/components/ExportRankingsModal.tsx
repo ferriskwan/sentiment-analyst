@@ -7,6 +7,7 @@ interface SavedRanking {
   query: string;
   itemCount: number;
   data: any[];
+  cost: number;
 }
 
 interface ExportRankingsModalProps {
@@ -41,12 +42,22 @@ export const ExportRankingsModal: React.FC<ExportRankingsModalProps> = ({
             const parts = key.split('-');
             const mediaType = parts[2] || 'unknown';
             const query = parts.slice(3).join('-') || 'home';
+
+            // Only top 3 pictures per category to be available for check-out
+            const top3Data = data.slice(0, 3).map((item: any) => ({
+              ...item,
+              _checkoutCost: (item.id % 20) + 1
+            }));
+            
+            const cost = top3Data.reduce((sum: number, item: any) => sum + item._checkoutCost, 0);
+
             rankings.push({
               key,
               mediaType,
               query,
-              itemCount: data.length,
-              data
+              itemCount: top3Data.length,
+              data: top3Data,
+              cost
             });
           }
         } catch (e) {
@@ -109,12 +120,12 @@ export const ExportRankingsModal: React.FC<ExportRankingsModalProps> = ({
             </div>
             <div>
               <div className="flex items-center gap-2">
-                <h2 className="text-base font-bold text-zinc-900">Saved Rankings</h2>
+                <h2 className="text-base font-bold text-zinc-900">Check-out</h2>
                 <span className="text-xs text-zinc-500 font-mono bg-zinc-100 px-2 py-0.5 rounded-full border border-zinc-200">
                   {savedRankings.length}
                 </span>
               </div>
-              <p className="text-[11px] text-zinc-500 mt-0.5">Evaluate and export your session preferences</p>
+              <p className="text-[11px] text-zinc-500 mt-0.5">Evaluate and check out your top 3 selections</p>
             </div>
           </div>
           <button
@@ -132,24 +143,30 @@ export const ExportRankingsModal: React.FC<ExportRankingsModalProps> = ({
               <div className="w-16 h-16 rounded-full bg-zinc-50 border border-zinc-100 flex items-center justify-center mb-4">
                 <Database className="w-8 h-8 text-zinc-300" />
               </div>
-              <p className="text-sm font-semibold text-zinc-700 mb-1">No saved rankings</p>
+              <p className="text-sm font-semibold text-zinc-700 mb-1">No items for check-out</p>
               <p className="text-xs text-zinc-400 max-w-xs leading-relaxed">
-                Search for topics, rank the results, and click 'Save Ranking' to evaluate them here.
+                Search for topics, rank the results, and click 'Save Ranking' to check them out here.
               </p>
             </div>
           ) : (
             <div className="space-y-6">
               <button
                 onClick={handleExportAll}
-                className="w-full flex items-center justify-center gap-2 px-4 py-3.5 bg-zinc-900 text-white hover:bg-zinc-800 rounded-xl text-xs font-bold uppercase tracking-wider transition-colors cursor-pointer shadow-md"
+                className="w-full flex items-center justify-between px-5 py-4 bg-zinc-900 text-white hover:bg-zinc-800 rounded-xl text-xs font-bold uppercase tracking-wider transition-colors cursor-pointer shadow-md"
               >
-                <Download className="w-4 h-4" />
-                Export All as JSON
+                <div className="flex items-center gap-2">
+                  <Download className="w-4 h-4" />
+                  <span>Check Out All as JSON</span>
+                </div>
+                <div className="flex items-center gap-2 bg-zinc-800 px-3 py-1.5 rounded-lg border border-zinc-700">
+                  <span className="text-[10px] text-zinc-400">Total Cost:</span>
+                  <span className="text-sm font-mono text-emerald-400">${savedRankings.reduce((sum, r) => sum + r.cost, 0)}</span>
+                </div>
               </button>
 
               <div className="space-y-3">
                 <h3 className="text-[10px] font-bold text-zinc-400 uppercase tracking-widest px-1 border-b border-zinc-100 pb-2">
-                  Saved Sessions
+                  Saved Sessions (Top 3)
                 </h3>
                 {savedRankings.map((ranking) => {
                   const isExpanded = expandedKey === ranking.key;
@@ -175,9 +192,12 @@ export const ExportRankingsModal: React.FC<ExportRankingsModalProps> = ({
                               <p className="text-sm font-bold text-zinc-900 capitalize truncate max-w-[200px]">
                                 {ranking.query}
                               </p>
+                              <span className="ml-auto text-xs font-mono font-bold text-emerald-600 bg-emerald-50 px-2 py-0.5 rounded-md border border-emerald-200">
+                                ${ranking.cost}
+                              </span>
                             </div>
                             <p className="text-[10px] text-zinc-500 uppercase tracking-wider font-semibold">
-                              {ranking.itemCount} Ranked Subjects
+                              {ranking.itemCount} Ranked Subjects (Top 3)
                             </p>
                           </div>
                         </div>
@@ -210,13 +230,18 @@ export const ExportRankingsModal: React.FC<ExportRankingsModalProps> = ({
                                     alt={title} 
                                     className="w-10 h-10 object-cover rounded bg-zinc-100 shrink-0 border border-zinc-100"
                                   />
-                                  <div className="flex-1 min-w-0 py-1">
-                                    <p className="text-[11px] font-bold text-zinc-800 truncate">
-                                      {title}
-                                    </p>
-                                    <p className="text-[9px] text-zinc-400 uppercase tracking-wider font-semibold truncate mt-0.5">
-                                      {creator}
-                                    </p>
+                                  <div className="flex-1 min-w-0 py-1 flex items-center justify-between pr-2">
+                                    <div>
+                                      <p className="text-[11px] font-bold text-zinc-800 truncate">
+                                        {title}
+                                      </p>
+                                      <p className="text-[9px] text-zinc-400 uppercase tracking-wider font-semibold truncate mt-0.5">
+                                        {creator}
+                                      </p>
+                                    </div>
+                                    <span className="text-xs font-mono font-bold text-emerald-600">
+                                      ${item._checkoutCost}
+                                    </span>
                                   </div>
                                 </div>
                               );

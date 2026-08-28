@@ -98,10 +98,10 @@ export const Header: React.FC<HeaderProps> = ({
             <button
               onClick={onOpenExport}
               className="relative p-2 text-zinc-700 hover:text-zinc-900 hover:bg-zinc-100 rounded-lg transition-colors cursor-pointer border border-transparent hover:border-zinc-200 flex items-center gap-1.5 text-xs font-semibold"
-              title="View and export saved rankings"
+              title="View and export check-out"
             >
               <Database className="w-4 h-4 text-zinc-500" />
-              <span className="hidden sm:inline">Saved Rankings</span>
+              <span className="hidden sm:inline">Check-out</span>
             </button>
 
             <button

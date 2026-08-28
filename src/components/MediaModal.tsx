@@ -230,11 +230,18 @@ export const MediaModal: React.FC<MediaModalProps> = ({
           {/* Main Visual Display */}
           <div className="relative rounded-xl overflow-hidden bg-black flex items-center justify-center min-h-[300px] max-h-[62vh] border border-zinc-800">
             {isPhoto && photo && (
-              <img
-                src={photo.src.large2x || photo.src.large}
-                alt={title}
-                className="max-h-[60vh] w-auto max-w-full object-contain mx-auto select-none"
-              />
+              <div className="relative max-h-[60vh] max-w-full flex items-center justify-center">
+                <img
+                  src={photo.src.large2x || photo.src.large}
+                  alt={title}
+                  className="max-h-[60vh] w-auto max-w-full object-contain mx-auto select-none"
+                />
+                <div className="absolute inset-0 flex items-center justify-center pointer-events-none z-10 overflow-hidden">
+                  <span className="text-white/40 text-4xl sm:text-6xl font-bold uppercase tracking-widest transform -rotate-45 drop-shadow-lg select-none whitespace-nowrap">
+                    PEXELS VISUAL IMPACT
+                  </span>
+                </div>
+              </div>
             )}
 
             {!isPhoto && video && (
