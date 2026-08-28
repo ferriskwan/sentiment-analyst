@@ -8,43 +8,35 @@ export function DisqusComments({ query }: DisqusCommentsProps) {
   const isMounted = useRef(false);
 
   useEffect(() => {
-    isMounted.current = true;
-    const PAGE_IDENTIFIER = query || 'home';
-    const PAGE_URL = window.location.href;
+    var PAGE_URL = window.location.href;
+    var PAGE_IDENTIFIER = query || 'home';
 
-    const config = function (this: any) {
-      this.page.url = PAGE_URL;
-      this.page.identifier = PAGE_IDENTIFIER;
-      this.page.title = `Search: ${PAGE_IDENTIFIER}`;
+    /**
+    *  RECOMMENDED CONFIGURATION VARIABLES: EDIT AND UNCOMMENT THE SECTION BELOW TO INSERT DYNAMIC VALUES FROM YOUR PLATFORM OR CMS.
+    *  LEARN WHY DEFINING THESE VARIABLES IS IMPORTANT: https://disqus.com/admin/universalcode/#configuration-variables    */
+    var disqus_config = function (this: any) {
+      this.page.url = PAGE_URL;  // Replace PAGE_URL with your page's canonical URL variable
+      this.page.identifier = PAGE_IDENTIFIER; // Replace PAGE_IDENTIFIER with your page's unique identifier variable
     };
+    
+    (window as any).disqus_config = disqus_config;
 
-    // Set the global config for the initial load
-    (window as any).disqus_config = config;
-
-    if (!document.getElementById('disqus-script')) {
-      const d = document;
-      const s = d.createElement('script');
-      s.id = 'disqus-script';
-      s.src = 'https://sentiment-analysis.disqus.com/embed.js';
-      s.setAttribute('data-timestamp', (+new Date()).toString());
-      s.async = true;
-      (d.head || d.body).appendChild(s);
+    if (!document.getElementById('disqus-embed-script')) {
+      (function() { // DON'T EDIT BELOW THIS LINE
+        var d = document, s = d.createElement('script');
+        s.id = 'disqus-embed-script'; // Added to prevent duplicate injections in React StrictMode
+        s.src = 'https://sentiment-analysis.disqus.com/embed.js';
+        s.setAttribute('data-timestamp', (+new Date()).toString());
+        (d.head || d.body).appendChild(s);
+      })();
     } else {
-      // If script is already there, we need to reset it.
-      // We must wait a tick to ensure the DOM has painted the div
+      // React-specific: reset Disqus when the search query changes without a full page reload
       setTimeout(() => {
-        if (isMounted.current && (window as any).DISQUS) {
-          (window as any).DISQUS.reset({
-            reload: true,
-            config: config
-          });
+        if ((window as any).DISQUS) {
+          (window as any).DISQUS.reset({ reload: true, config: disqus_config });
         }
       }, 100);
     }
-
-    return () => {
-      isMounted.current = false;
-    };
   }, [query]);
 
   return (
