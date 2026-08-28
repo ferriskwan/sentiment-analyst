@@ -21,6 +21,7 @@ import { Photo, Video, MediaType, FavoriteItem } from '../types';
 
 // Sortable Wrapper Component (Tablet Style)
 interface SortableItemProps {
+  key?: React.Key;
   id: string | number;
   index: number;
   imageUrl: string;
