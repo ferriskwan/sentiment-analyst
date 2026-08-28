@@ -7,35 +7,41 @@ interface DisqusCommentsProps {
 
 export function DisqusComments({ query }: DisqusCommentsProps) {
   const [isExpanded, setIsExpanded] = useState(false);
+  const [hasOpened, setHasOpened] = useState(false);
   const pageIdentifier = query || 'home';
   const shortname = 'proptrust';
 
   useEffect(() => {
-    // Only inject the script once
-    const injectDisqus = () => {
-      (window as any).disqus_config = function (this: any) {
-        this.page.url = window.location.href;
-        this.page.identifier = pageIdentifier;
-      };
+    if (isExpanded) {
+      setHasOpened(true);
+    }
+  }, [isExpanded]);
 
-      if ((window as any).DISQUS) {
-        (window as any).DISQUS.reset({
-          reload: true,
-          config: (window as any).disqus_config,
-        });
-      } else {
+  useEffect(() => {
+    if (!hasOpened) return;
+
+    (window as any).disqus_config = function (this: any) {
+      this.page.url = window.location.href;
+      this.page.identifier = pageIdentifier;
+    };
+
+    if ((window as any).DISQUS) {
+      (window as any).DISQUS.reset({
+        reload: true,
+        config: (window as any).disqus_config,
+      });
+    } else {
+      const scriptId = 'disqus-embed-script';
+      if (!document.getElementById(scriptId)) {
         const d = document,
           s = d.createElement('script');
+        s.id = scriptId;
         s.src = `https://${shortname}.disqus.com/embed.js`;
         s.setAttribute('data-timestamp', (+new Date()).toString());
         (d.head || d.body).appendChild(s);
       }
-    };
-
-    // Small delay to ensure the container is in the DOM
-    const timer = setTimeout(injectDisqus, 200);
-    return () => clearTimeout(timer);
-  }, [pageIdentifier, shortname]);
+    }
+  }, [hasOpened, pageIdentifier, shortname]);
 
   return (
     <div className="fixed bottom-6 right-6 z-50 flex flex-col items-end">
@@ -59,9 +65,8 @@ export function DisqusComments({ query }: DisqusCommentsProps) {
           </button>
         </div>
         {/* Comments Container */}
-        <div className="flex-1 overflow-y-auto p-4 bg-white relative">
-          {/* Unconditionally rendered so Disqus can initialize even while hidden */}
-          <div id="disqus_thread"></div>
+        <div className="flex-1 overflow-y-auto p-4 bg-white relative w-full h-full">
+          {hasOpened && <div id="disqus_thread" className="w-full min-h-[400px]"></div>}
           <noscript>
             Please enable JavaScript to view the{' '}
             <a href="https://disqus.com/?ref_noscript">comments powered by Disqus.</a>
