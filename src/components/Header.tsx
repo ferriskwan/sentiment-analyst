@@ -1,5 +1,5 @@
 import React from 'react';
-import { Camera, Film, Heart, Sparkles, Compass, Flame, Award, Key } from 'lucide-react';
+import { Camera, Film, Heart, Sparkles, Compass, Flame, Award, Key, Database } from 'lucide-react';
 import { MediaType, FeedSection } from '../types';
 
 interface HeaderProps {
@@ -9,6 +9,7 @@ interface HeaderProps {
   setSection: (section: FeedSection) => void;
   favoriteCount: number;
   onOpenFavorites: () => void;
+  onOpenExport: () => void;
   hasApiKey: boolean;
 }
 
@@ -19,6 +20,7 @@ export const Header: React.FC<HeaderProps> = ({
   setSection,
   favoriteCount,
   onOpenFavorites,
+  onOpenExport,
   hasApiKey,
 }) => {
   const sections: { id: FeedSection; label: string; icon: React.ReactNode }[] = [
@@ -81,7 +83,7 @@ export const Header: React.FC<HeaderProps> = ({
             </button>
           </div>
 
-          {/* Right Action Tools: API Status + Favorites */}
+          {/* Right Action Tools: API Status + Actions */}
           <div className="flex items-center gap-2.5">
             {!hasApiKey && (
               <div
@@ -92,6 +94,15 @@ export const Header: React.FC<HeaderProps> = ({
                 <span>Curated Stock Mode</span>
               </div>
             )}
+
+            <button
+              onClick={onOpenExport}
+              className="relative p-2 text-zinc-700 hover:text-zinc-900 hover:bg-zinc-100 rounded-lg transition-colors cursor-pointer border border-transparent hover:border-zinc-200 flex items-center gap-1.5 text-xs font-semibold"
+              title="View and export saved rankings"
+            >
+              <Database className="w-4 h-4 text-zinc-500" />
+              <span className="hidden sm:inline">Saved Rankings</span>
+            </button>
 
             <button
               id="favorites-drawer-btn"

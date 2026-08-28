@@ -6,6 +6,7 @@ import { FilterBar } from './components/FilterBar';
 import { MediaGrid } from './components/MediaGrid';
 import { MediaModal } from './components/MediaModal';
 import { FavoritesDrawer } from './components/FavoritesDrawer';
+import { ExportRankingsDrawer } from './components/ExportRankingsDrawer';
 import { DisqusComments } from './components/DisqusComments';
 import { Photo, Video, MediaType, FeedSection, FilterState, FavoriteItem } from './types';
 import { FALLBACK_PHOTOS, FALLBACK_VIDEOS } from './data/fallbackMedia';
@@ -50,6 +51,7 @@ export default function App() {
     }
   });
   const [isFavoritesOpen, setIsFavoritesOpen] = useState(false);
+  const [isExportOpen, setIsExportOpen] = useState(false);
 
   // Save favorites to localStorage
   useEffect(() => {
@@ -364,6 +366,7 @@ export default function App() {
         }}
         favoriteCount={favorites.length}
         onOpenFavorites={() => setIsFavoritesOpen(true)}
+        onOpenExport={() => setIsExportOpen(true)}
         hasApiKey={hasApiKey}
       />
 
@@ -443,6 +446,12 @@ export default function App() {
         onRemoveFavorite={handleRemoveFavorite}
         onClearAll={handleClearAllFavorites}
         onSelectMedia={handleSelectFavoriteMedia}
+      />
+
+      {/* Export Rankings Drawer */}
+      <ExportRankingsDrawer
+        isOpen={isExportOpen}
+        onClose={() => setIsExportOpen(false)}
       />
     </div>
   );
