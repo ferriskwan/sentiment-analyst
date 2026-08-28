@@ -6,7 +6,7 @@ import { FilterBar } from './components/FilterBar';
 import { MediaGrid } from './components/MediaGrid';
 import { MediaModal } from './components/MediaModal';
 import { FavoritesDrawer } from './components/FavoritesDrawer';
-import { ExportRankingsDrawer } from './components/ExportRankingsDrawer';
+import { ExportRankingsModal } from './components/ExportRankingsModal';
 import { DisqusComments } from './components/DisqusComments';
 import { Photo, Video, MediaType, FeedSection, FilterState, FavoriteItem } from './types';
 import { FALLBACK_PHOTOS, FALLBACK_VIDEOS } from './data/fallbackMedia';
@@ -448,8 +448,8 @@ export default function App() {
         onSelectMedia={handleSelectFavoriteMedia}
       />
 
-      {/* Export Rankings Drawer */}
-      <ExportRankingsDrawer
+      {/* Export Rankings Modal */}
+      <ExportRankingsModal
         isOpen={isExportOpen}
         onClose={() => setIsExportOpen(false)}
       />
