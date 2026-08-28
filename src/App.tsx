@@ -83,8 +83,8 @@ export default function App() {
         const params = new URLSearchParams();
         params.append('type', mediaType);
         params.append('section', section);
-        params.append('page', pageToFetch.toString());
-        params.append('per_page', '24');
+        params.append('page', '1'); // Force page 1 for limit of 10
+        params.append('per_page', '10'); // Limit to 10
 
         if (query) {
           params.append('query', query);
@@ -131,8 +131,8 @@ export default function App() {
             setPhotos(fetchedPhotos);
           }
 
-          setTotalResults(data.total_results || fetchedPhotos.length);
-          setHasMore(Boolean(data.next_page || (!data.hasApiKey && pageToFetch === 1 && fetchedPhotos.length > 0)));
+          setTotalResults(Math.min(data.total_results || fetchedPhotos.length, 10));
+          setHasMore(false); // Only top 10 items allowed
         } else {
           // Videos
           let fetchedVideos: Video[] = data.videos || [];
@@ -152,8 +152,8 @@ export default function App() {
             setVideos(fetchedVideos);
           }
 
-          setTotalResults(data.total_results || fetchedVideos.length);
-          setHasMore(Boolean(data.next_page || (!data.hasApiKey && pageToFetch === 1 && fetchedVideos.length > 0)));
+          setTotalResults(Math.min(data.total_results || fetchedVideos.length, 10));
+          setHasMore(false); // Only top 10 items allowed
         }
       } catch (err: any) {
         console.error('Fetch error:', err);
