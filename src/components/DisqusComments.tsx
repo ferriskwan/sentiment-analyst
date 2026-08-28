@@ -1,36 +1,50 @@
-import React, { useEffect } from 'react';
+import React, { useEffect, useRef } from 'react';
 
 interface DisqusCommentsProps {
   query: string;
 }
 
 export function DisqusComments({ query }: DisqusCommentsProps) {
+  const isMounted = useRef(false);
+
   useEffect(() => {
-    // Define the disqus config globally so the embed script picks it up, or reset uses it.
+    isMounted.current = true;
+    const PAGE_IDENTIFIER = query || 'home';
+    const PAGE_URL = window.location.href;
+
     const config = function (this: any) {
-      this.page.identifier = query || 'home';
-      this.page.url = window.location.href;
-      this.page.title = query ? `Search: ${query}` : 'Home';
+      this.page.url = PAGE_URL;
+      this.page.identifier = PAGE_IDENTIFIER;
+      this.page.title = `Search: ${PAGE_IDENTIFIER}`;
     };
 
+    // Set the global config for the initial load
+    (window as any).disqus_config = config;
+
     if (!document.getElementById('disqus-script')) {
-      (window as any).disqus_config = config;
-      
-      const script = document.createElement('script');
-      script.id = 'disqus-script';
-      script.src = 'https://sentiment-analysis.disqus.com/embed.js';
-      script.setAttribute('data-timestamp', (+new Date()).toString());
-      script.async = true;
-      (document.head || document.body).appendChild(script);
+      const d = document;
+      const s = d.createElement('script');
+      s.id = 'disqus-script';
+      s.src = 'https://sentiment-analysis.disqus.com/embed.js';
+      s.setAttribute('data-timestamp', (+new Date()).toString());
+      s.async = true;
+      (d.head || d.body).appendChild(s);
     } else {
-      // If DISQUS is already loaded globally, reset it for the new query.
-      if ((window as any).DISQUS) {
-        (window as any).DISQUS.reset({
-          reload: true,
-          config: config
-        });
-      }
+      // If script is already there, we need to reset it.
+      // We must wait a tick to ensure the DOM has painted the div
+      setTimeout(() => {
+        if (isMounted.current && (window as any).DISQUS) {
+          (window as any).DISQUS.reset({
+            reload: true,
+            config: config
+          });
+        }
+      }, 100);
     }
+
+    return () => {
+      isMounted.current = false;
+    };
   }, [query]);
 
   return (
